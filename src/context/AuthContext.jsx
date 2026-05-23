@@ -21,19 +21,22 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  async function sendOTP(phone) {
+  async function sendOTP(email) {
     const { error } = await supabase.auth.signInWithOtp({
-      phone,
-      options: { shouldCreateUser: true }
+      email,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: undefined
+      }
     })
     if (error) throw error
   }
 
-  async function verifyOTP(phone, token) {
+  async function verifyOTP(email, token) {
     const { data, error } = await supabase.auth.verifyOtp({
-      phone,
+      email,
       token,
-      type: 'sms'
+      type: 'email'
     })
     if (error) throw error
     return data

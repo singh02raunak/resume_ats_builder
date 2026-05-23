@@ -1,26 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { FileText, Phone, ArrowRight, ChevronLeft, RefreshCw } from 'lucide-react'
+import { FileText, Mail, ArrowRight, ChevronLeft, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Footer from '../components/Footer'
-
-const COUNTRY_CODES = [
-  { code: '+91', flag: '🇮🇳', name: 'India' },
-  { code: '+1',  flag: '🇺🇸', name: 'USA' },
-  { code: '+44', flag: '🇬🇧', name: 'UK' },
-  { code: '+61', flag: '🇦🇺', name: 'Australia' },
-  { code: '+971', flag: '🇦🇪', name: 'UAE' },
-  { code: '+65', flag: '🇸🇬', name: 'Singapore' },
-]
 
 export default function Login() {
   const { user, sendOTP, verifyOTP } = useAuth()
   const navigate = useNavigate()
 
-  const [step, setStep] = useState('phone')
-  const [countryCode, setCountryCode] = useState('+91')
-  const [phone, setPhone] = useState('')
+  const [step, setStep] = useState('email')
+  const [email, setEmail] = useState('')
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
   const [resendTimer, setResendTimer] = useState(0)
@@ -36,23 +26,18 @@ export default function Login() {
     return () => clearTimeout(t)
   }, [resendTimer])
 
-  function fullPhone() {
-    return countryCode + phone.replace(/\D/g, '')
-  }
-
   async function handleSendOTP(e) {
     e.preventDefault()
-    const digits = phone.replace(/\D/g, '')
-    if (digits.length < 7) {
-      toast.error('Please enter a valid phone number')
+    if (!email.trim() || !email.includes('@')) {
+      toast.error('Please enter a valid email address')
       return
     }
     setLoading(true)
     try {
-      await sendOTP(fullPhone())
+      await sendOTP(email.trim())
       setStep('otp')
       setResendTimer(60)
-      toast.success('OTP sent to your phone!')
+      toast.success('OTP sent! Check your email inbox.')
       setTimeout(() => inputRefs.current[0]?.focus(), 100)
     } catch (err) {
       toast.error(err.message || 'Failed to send OTP')
@@ -92,7 +77,7 @@ export default function Login() {
     }
     setLoading(true)
     try {
-      await verifyOTP(fullPhone(), code)
+      await verifyOTP(email, code)
       toast.success('Welcome! Redirecting…')
       navigate('/upload')
     } catch (err) {
@@ -108,7 +93,7 @@ export default function Login() {
     if (resendTimer > 0) return
     setLoading(true)
     try {
-      await sendOTP(fullPhone())
+      await sendOTP(email)
       setResendTimer(60)
       setOtp(['', '', '', '', '', ''])
       toast.success('New OTP sent!')
@@ -145,7 +130,7 @@ export default function Login() {
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
         <div className="card fade-up" style={{ width: '100%', maxWidth: 440 }}>
 
-          {step === 'phone' ? (
+          {step === 'email' ? (
             <>
               <div style={{ textAlign: 'center', marginBottom: 32 }}>
                 <div style={{
@@ -154,43 +139,28 @@ export default function Login() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   margin: '0 auto 16px'
                 }}>
-                  <Phone size={24} color="var(--emerald)" />
+                  <Mail size={24} color="var(--emerald)" />
                 </div>
                 <h1 style={{ fontSize: 24, marginBottom: 8 }}>Sign in to ResumeATS</h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                  Enter your mobile number and we'll send a one-time code.
+                  Enter your email and we'll send a one-time code. No password needed.
                 </p>
               </div>
 
               <form onSubmit={handleSendOTP} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: 'var(--text-dim)' }}>
-                    Mobile number
+                    Email address
                   </label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <select
-                      value={countryCode}
-                      onChange={e => setCountryCode(e.target.value)}
-                      className="input"
-                      style={{ width: 110, flexShrink: 0, cursor: 'pointer' }}
-                    >
-                      {COUNTRY_CODES.map(c => (
-                        <option key={c.code} value={c.code}>
-                          {c.flag} {c.code}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="tel"
-                      className="input"
-                      placeholder="9876543210"
-                      value={phone}
-                      onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
-                      maxLength={12}
-                      autoFocus
-                      style={{ flex: 1 }}
-                    />
-                  </div>
+                  <input
+                    type="email"
+                    className="input"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    autoFocus
+                    required
+                  />
                 </div>
 
                 <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center' }}>
@@ -205,7 +175,7 @@ export default function Login() {
           ) : (
             <>
               <button
-                onClick={() => { setStep('phone'); setOtp(['', '', '', '', '', '']) }}
+                onClick={() => { setStep('email'); setOtp(['', '', '', '', '', '']) }}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   background: 'none', border: 'none', color: 'var(--text-muted)',
@@ -222,12 +192,12 @@ export default function Login() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   margin: '0 auto 16px'
                 }}>
-                  <span style={{ fontSize: 24 }}>📱</span>
+                  <span style={{ fontSize: 24 }}>📬</span>
                 </div>
-                <h1 style={{ fontSize: 24, marginBottom: 8 }}>Enter OTP</h1>
+                <h1 style={{ fontSize: 24, marginBottom: 8 }}>Check your inbox</h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
                   We sent a 6-digit code to<br />
-                  <strong style={{ color: 'var(--text)' }}>{countryCode} {phone}</strong>
+                  <strong style={{ color: 'var(--text)' }}>{email}</strong>
                 </p>
               </div>
 
