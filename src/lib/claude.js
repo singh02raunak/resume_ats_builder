@@ -35,17 +35,22 @@ export async function analyzeResume(resumeText, jobDescription = '') {
     ? `\n\nJob Description to match against:\n${jobDescription}`
     : ''
 
-  const systemPrompt = `You are a strict ATS (Applicant Tracking System) scoring engine. You must score resumes harshly and realistically — most resumes score between 40-75. Only near-perfect resumes score above 85. A score of 100 is almost impossible.
+  const systemPrompt = `You are a strict ATS (Applicant Tracking System) scoring engine. Score resumes exactly as a real ATS would — harshly and consistently.
 
-Scoring rules:
-- keywords (0-20): Deduct points for missing industry keywords, no job-specific terms, generic language. A resume without a job description gets max 14/20.
-- formatting (0-20): Deduct for tables, columns, headers/footers, images, special characters, non-standard fonts, creative layouts. Plain single-column = full marks.
-- workExperience (0-20): Deduct for missing quantified achievements, vague bullet points, employment gaps, short tenures, no action verbs.
-- education (0-15): Deduct for missing graduation year, no GPA (if recent grad), vague degree names, missing institution location.
-- skills (0-15): Deduct for dumping too many skills without context, missing proficiency levels, no technical skills for tech roles.
-- contactInfo (0-10): Deduct for missing LinkedIn, no location, unprofessional email, missing phone.
+STRICT SCORING RULES:
+- Most resumes score 40-72. A score above 85 requires near-perfect formatting, keywords, and content.
+- A score of 90+ is extremely rare and only for flawless resumes. 100 is impossible.
+- YOUR atsScore MUST exactly equal the sum of all scoreBreakdown scores. Never inflate.
 
-Be strict. If a resume has ANY of these issues, deduct points. The atsScore must equal the sum of all scoreBreakdown scores.
+Deduction rules per category:
+- keywords (0-20): -3 if no job description provided (max 14/20), -2 per missing industry keyword, -3 for generic/vague language
+- formatting (0-20): -5 for tables/columns/graphics, -3 for special characters in headers, -2 for non-standard bullets, -4 for creative layouts
+- workExperience (0-20): -3 per role with no quantified achievement, -2 for vague bullets, -4 for unexplained gaps, -2 for no action verbs
+- education (0-15): -3 for missing year, -2 for vague degree name, -2 for missing institution location
+- skills (0-15): -3 for no categorization, -2 for missing proficiency context, -3 for no technical skills in tech roles
+- contactInfo (0-10): -2 for missing LinkedIn, -2 for missing location, -3 for missing phone, -2 for unprofessional email
+
+Calculate each category score first, sum them up, that sum IS the atsScore. No rounding up.
 
 You must respond ONLY with a valid JSON object — no markdown, no explanation, no code fences. The JSON must exactly match this structure:
 
@@ -89,14 +94,20 @@ You must respond ONLY with a valid JSON object — no markdown, no explanation, 
 
 // ─── Resume Improvement ───────────────────────────────────────
 
-export async function improveResume(resumeText, analysis, jobDescription = '', plan = 'standard') {
+export async function improveResume(resumeText, analysis, jobDescription = '', plan = 'standard', templateId = 'classic') {
   const jdContext = jobDescription
     ? `\n\nTarget Job Description:\n${jobDescription}`
     : ''
 
+  const templateAtsNote = ['creative', 'academic'].includes(templateId)
+    ? 'Note: the selected template uses structured section headers — ensure content is plain text with no special characters or tables.'
+    : templateId === 'minimal'
+    ? 'Note: the selected template is minimal — keep content concise and impactful.'
+    : 'Note: the selected template is ATS-safe single-column — optimise freely.'
+
   const planInstructions = {
-    standard: 'Rewrite the resume for ATS compatibility targeting 80+ score. Fix all identified issues, add missing keywords naturally, improve formatting and bullet points with action verbs.',
-    premium: 'Do a complete professional overhaul targeting 90+ ATS score. Fix all issues, inject keywords strategically, rewrite every bullet point with strong action verbs and quantified achievements, craft a compelling summary, restructure sections optimally for maximum ATS impact.'
+    standard: `Rewrite the resume targeting a final ATS score of 80-89 (not 90+, not 100). Fix the identified issues, add missing keywords naturally, improve bullet points with action verbs and 1-2 quantified achievements per role. ${templateAtsNote}`,
+    premium: `Do a complete professional overhaul targeting a final ATS score of 90-95 (never 96+). Fix ALL issues, inject keywords strategically throughout, rewrite every bullet with strong action verbs and quantified achievements, craft a compelling summary, restructure sections for maximum ATS impact. ${templateAtsNote}`
   }
 
   const systemPrompt = `You are an expert resume writer and ATS optimization specialist. ${planInstructions[plan]}

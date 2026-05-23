@@ -1,45 +1,58 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { FileText, Mail, ArrowRight, ChevronLeft, RefreshCw } from 'lucide-react'
+import { FileText, Phone, ArrowRight, ChevronLeft, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Footer from '../components/Footer'
+
+const COUNTRY_CODES = [
+  { code: '+91', flag: '🇮🇳', name: 'India' },
+  { code: '+1',  flag: '🇺🇸', name: 'USA' },
+  { code: '+44', flag: '🇬🇧', name: 'UK' },
+  { code: '+61', flag: '🇦🇺', name: 'Australia' },
+  { code: '+971', flag: '🇦🇪', name: 'UAE' },
+  { code: '+65', flag: '🇸🇬', name: 'Singapore' },
+]
 
 export default function Login() {
   const { user, sendOTP, verifyOTP } = useAuth()
   const navigate = useNavigate()
 
-  const [step, setStep] = useState('email') // 'email' | 'otp'
-  const [email, setEmail] = useState('')
+  const [step, setStep] = useState('phone')
+  const [countryCode, setCountryCode] = useState('+91')
+  const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [loading, setLoading] = useState(false)
   const [resendTimer, setResendTimer] = useState(0)
   const inputRefs = useRef([])
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user) navigate('/upload', { replace: true })
   }, [user])
 
-  // Resend countdown
   useEffect(() => {
     if (resendTimer <= 0) return
     const t = setTimeout(() => setResendTimer(r => r - 1), 1000)
     return () => clearTimeout(t)
   }, [resendTimer])
 
+  function fullPhone() {
+    return countryCode + phone.replace(/\D/g, '')
+  }
+
   async function handleSendOTP(e) {
     e.preventDefault()
-    if (!email.trim() || !email.includes('@')) {
-      toast.error('Please enter a valid email address')
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length < 7) {
+      toast.error('Please enter a valid phone number')
       return
     }
     setLoading(true)
     try {
-      await sendOTP(email.trim())
+      await sendOTP(fullPhone())
       setStep('otp')
       setResendTimer(60)
-      toast.success('OTP sent! Check your email inbox.')
+      toast.success('OTP sent to your phone!')
       setTimeout(() => inputRefs.current[0]?.focus(), 100)
     } catch (err) {
       toast.error(err.message || 'Failed to send OTP')
@@ -57,9 +70,7 @@ export default function Login() {
   }
 
   function handleOtpKeyDown(idx, e) {
-    if (e.key === 'Backspace' && !otp[idx] && idx > 0) {
-      inputRefs.current[idx - 1]?.focus()
-    }
+    if (e.key === 'Backspace' && !otp[idx] && idx > 0) inputRefs.current[idx - 1]?.focus()
     if (e.key === 'ArrowLeft' && idx > 0) inputRefs.current[idx - 1]?.focus()
     if (e.key === 'ArrowRight' && idx < 5) inputRefs.current[idx + 1]?.focus()
   }
@@ -81,7 +92,7 @@ export default function Login() {
     }
     setLoading(true)
     try {
-      await verifyOTP(email, code)
+      await verifyOTP(fullPhone(), code)
       toast.success('Welcome! Redirecting…')
       navigate('/upload')
     } catch (err) {
@@ -97,7 +108,7 @@ export default function Login() {
     if (resendTimer > 0) return
     setLoading(true)
     try {
-      await sendOTP(email)
+      await sendOTP(fullPhone())
       setResendTimer(60)
       setOtp(['', '', '', '', '', ''])
       toast.success('New OTP sent!')
@@ -111,7 +122,6 @@ export default function Login() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', position: 'relative', overflow: 'hidden' }}>
-      {/* Background glow */}
       <div style={{
         position: 'absolute', top: '30%', left: '50%', transform: 'translateX(-50%)',
         width: 500, height: 300,
@@ -119,7 +129,6 @@ export default function Login() {
         pointerEvents: 'none'
       }} />
 
-      {/* Logo bar */}
       <div style={{ padding: '20px 0', borderBottom: '1px solid var(--border)' }}>
         <div className="container">
           <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -133,11 +142,10 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Main Card */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
         <div className="card fade-up" style={{ width: '100%', maxWidth: 440 }}>
 
-          {step === 'email' ? (
+          {step === 'phone' ? (
             <>
               <div style={{ textAlign: 'center', marginBottom: 32 }}>
                 <div style={{
@@ -146,28 +154,43 @@ export default function Login() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   margin: '0 auto 16px'
                 }}>
-                  <Mail size={24} color="var(--emerald)" />
+                  <Phone size={24} color="var(--emerald)" />
                 </div>
                 <h1 style={{ fontSize: 24, marginBottom: 8 }}>Sign in to ResumeATS</h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-                  Enter your email and we'll send a one-time code. No password needed.
+                  Enter your mobile number and we'll send a one-time code.
                 </p>
               </div>
 
               <form onSubmit={handleSendOTP} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: 'var(--text-dim)' }}>
-                    Email address
+                    Mobile number
                   </label>
-                  <input
-                    type="email"
-                    className="input"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    autoFocus
-                    required
-                  />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <select
+                      value={countryCode}
+                      onChange={e => setCountryCode(e.target.value)}
+                      className="input"
+                      style={{ width: 110, flexShrink: 0, cursor: 'pointer' }}
+                    >
+                      {COUNTRY_CODES.map(c => (
+                        <option key={c.code} value={c.code}>
+                          {c.flag} {c.code}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="tel"
+                      className="input"
+                      placeholder="9876543210"
+                      value={phone}
+                      onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
+                      maxLength={12}
+                      autoFocus
+                      style={{ flex: 1 }}
+                    />
+                  </div>
                 </div>
 
                 <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center' }}>
@@ -182,7 +205,7 @@ export default function Login() {
           ) : (
             <>
               <button
-                onClick={() => { setStep('email'); setOtp(['', '', '', '', '', '']) }}
+                onClick={() => { setStep('phone'); setOtp(['', '', '', '', '', '']) }}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   background: 'none', border: 'none', color: 'var(--text-muted)',
@@ -199,17 +222,16 @@ export default function Login() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   margin: '0 auto 16px'
                 }}>
-                  <span style={{ fontSize: 24 }}>📬</span>
+                  <span style={{ fontSize: 24 }}>📱</span>
                 </div>
-                <h1 style={{ fontSize: 24, marginBottom: 8 }}>Check your inbox</h1>
+                <h1 style={{ fontSize: 24, marginBottom: 8 }}>Enter OTP</h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
                   We sent a 6-digit code to<br />
-                  <strong style={{ color: 'var(--text)' }}>{email}</strong>
+                  <strong style={{ color: 'var(--text)' }}>{countryCode} {phone}</strong>
                 </p>
               </div>
 
               <form onSubmit={handleVerifyOTP}>
-                {/* OTP Input */}
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 28 }}>
                   {otp.map((digit, idx) => (
                     <input

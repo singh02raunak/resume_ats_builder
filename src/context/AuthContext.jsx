@@ -8,13 +8,11 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
-    // Listen for auth changes (handles session restoration)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       setLoading(false)
@@ -23,24 +21,19 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Send OTP to email
-  async function sendOTP(email) {
+  async function sendOTP(phone) {
     const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: undefined // we use code, not magic link
-      }
+      phone,
+      options: { shouldCreateUser: true }
     })
     if (error) throw error
   }
 
-  // Verify OTP code
-  async function verifyOTP(email, token) {
+  async function verifyOTP(phone, token) {
     const { data, error } = await supabase.auth.verifyOtp({
-      email,
+      phone,
       token,
-      type: 'email'
+      type: 'sms'
     })
     if (error) throw error
     return data

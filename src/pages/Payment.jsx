@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useResume } from '../context/ResumeContext'
 import { useAuth } from '../context/AuthContext'
-import { initiatePayment, PLANS } from '../lib/utils'
+import { PLANS } from '../lib/utils'
 import { TEMPLATES } from '../lib/templates'
 import { improveResume as claudeImproveResume } from '../lib/claude'
 import { updateAnalysis } from '../lib/supabase'
@@ -41,25 +41,9 @@ export default function Payment() {
       navigate('/upload')
       return
     }
-
     setProcessingPlan(planId)
-
-    initiatePayment({
-      plan: planId,
-      userEmail: user?.email,
-      userName: user?.email?.split('@')[0],
-      analysisId,
-      onSuccess: async (paymentData) => {
-        toast.success('Payment successful! Generating your improved resume…')
-        await generateImprovedResume(planId, paymentData)
-      },
-      onFailure: (msg) => {
-        if (msg !== 'Payment cancelled') {
-          toast.error(msg || 'Payment failed. Please try again.')
-        }
-        setProcessingPlan(null)
-      }
-    })
+    toast.success('Generating your improved resume…')
+    await generateImprovedResume(planId, {})
   }
 
   async function generateImprovedResume(planId, paymentData) {
@@ -72,7 +56,7 @@ export default function Payment() {
       }, 2000)
 
       // Generate improved resume
-      const result = await claudeImproveResume(resumeText, analysis, jobDescription, planId)
+      const result = await claudeImproveResume(resumeText, analysis, jobDescription, planId, selectedTemplate)
 
       clearInterval(stepInterval)
       setImproveStep(IMPROVE_STEPS.length - 1)
@@ -170,7 +154,7 @@ export default function Payment() {
             {/* Trust badges */}
             <div style={{ display: 'flex', gap: 20, justifyContent: 'center', marginTop: 16, flexWrap: 'wrap' }}>
               {[
-                { icon: Shield, text: 'Secure payment via Razorpay' },
+                { icon: Shield, text: 'Secure & encrypted' },
                 { icon: Lock, text: 'Your data is encrypted' },
                 { icon: CheckCircle2, text: '7-day refund on Career Edge plan' }
               ].map(({ icon: Icon, text }) => (
